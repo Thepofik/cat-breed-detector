@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Определитель пород кошек</title>
+    <style>
+        /* ОСНОВНЫЕ СТИЛИ */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            padding: 40px;
+            max-width: 600px;
+            width: 100%;
+        }
+
+        h1 {
+            color: #333;
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-align: center;
+        }
+
+        .subtitle {
+            color: #666;
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 1.1em;
+        }
+
+        /* ОБЛАСТЬ ЗАГРУЗКИ */
+        .upload-area {
+            border: 3px dashed #764ba2;
+            border-radius: 15px;
+            padding: 40px;
+            text-align: center;
+            background: #f8f9fa;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-bottom: 20px;
+        }
+
+        .upload-area:hover {
+            background: #f0f2f5;
+            border-color: #667eea;
+        }
+
+        .upload-icon {
+            font-size: 64px;
+            display: block;
+            margin-bottom: 15px;
+        }
+
+        .upload-area p {
+            color: #555;
+            font-size: 1.1em;
+            margin: 5px 0;
+        }
+
+        .upload-area .small {
+            font-size: 0.9em;
+            color: #999;
+        }
+
+        /* СКРЫТЫЙ INPUT */
+        #fileInput {
+            display: none;
+        }
+
+        /* ПРЕДПРОСМОТР ФОТО */
+        .preview-container {
+            text-align: center;
+            margin: 20px 0;
+            display: none;
+        }
+
+        .preview-container img {
+            max-width: 100%;
+            max-height: 300px;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+            border: 3px solid #fff;
+        }
+
+        /* КНОПКА */
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 15px 40px;
+            font-size: 1.2em;
+            border-radius: 50px;
+            cursor: pointer;
+            width: 100%;
+            font-weight: bold;
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        /* СООБЩЕНИЕ ОБ ОШИБКЕ */
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 20px;
+            text-align: center;
+            border-left: 4px solid #dc3545;
+        }
+
+        /* ИНФОРМАЦИЯ О РЕЖИМЕ */
+        .info {
+            background: #e7f3ff;
+            color: #004085;
+            padding: 10px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            text-align: center;
+            font-size: 0.9em;
+            border-left: 4px solid #007bff;
+        }
+
+        /* АДАПТАЦИЯ ДЛЯ ТЕЛЕФОНОВ */
+        @media (max-width: 480px) {
+            .container {
+                padding: 20px;
+            }
+
+            h1 {
+                font-size: 2em;
+            }
+
+            .upload-area {
+                padding: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🐱 Определитель пород кошек</h1>
+        <p class="subtitle">Загрузите фото, и нейросеть определит породу</p>
+
+        <!-- ИНФОРМАЦИЯ О РЕЖИМЕ (будет показана, если есть) -->
+        {% if demo %}
+        <div class="info">
+            ⚠️ Демо-режим: результаты случайные
+        </div>
+        {% endif %}
+
+        <!-- ФОРМА ЗАГРУЗКИ -->
+        <form method="post" enctype="multipart/form-data" id="uploadForm">
+            <div class="upload-area" onclick="document.getElementById('fileInput').click()">
+                <span class="upload-icon">📸</span>
+                <p>Нажмите, чтобы выбрать фото</p>
+                <p class="small">или перетащите файл сюда</p>
+                <p class="small">Поддерживаются JPG, PNG, GIF (до 16 МБ)</p>
+            </div>
+
+            <input type="file" name="photo" id="fileInput" accept="image/*" required>
+
+            <div class="preview-container" id="previewContainer">
+                <img id="preview" src="#" alt="Предпросмотр">
+            </div>
+
+            <button type="submit" class="btn" id="submitBtn">🔍 Определить породу</button>
+        </form>
+
+        <!-- СООБЩЕНИЕ ОБ ОШИБКЕ (если есть) -->
+        {% if error %}
+        <div class="error">
+            ❌ {{ error }}
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- JAVASCRIPT ДЛЯ ПРЕДПРОСМОТРА -->
+    <script>
+        // Получаем элементы
+        const fileInput = document.getElementById('fileInput');
+        const previewContainer = document.getElementById('previewContainer');
+        const preview = document.getElementById('preview');
+        const submitBtn = document.getElementById('submitBtn');
+
+        // Когда пользователь выбирает файл
+        fileInput.addEventListener('change', function(e) {
+            const file = this.files[0];
+
+            if (file) {
+                // Проверяем размер файла (16 МБ = 16 * 1024 * 1024 байт)
+                if (file.size > 16 * 1024 * 1024) {
+                    alert('Файл слишком большой! Максимальный размер: 16 МБ');
+                    this.value = '';
+                    previewContainer.style.display = 'none';
+                    return;
+                }
+
+                // Проверяем тип файла
+                const allowedTypes = ['image/jpeg', 'image/png', 'image/gif'];
+                if (!allowedTypes.includes(file.type)) {
+                    alert('Можно загружать только JPG, PNG или GIF!');
+                    this.value = '';
+                    previewContainer.style.display = 'none';
+                    return;
+                }
+
+                // Показываем предпросмотр
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    preview.src = e.target.result;
+                    previewContainer.style.display = 'block';
+                };
+                reader.readAsDataURL(file);
+
+                // Меняем текст кнопки
+                submitBtn.textContent = '🔍 Определить породу';
+            } else {
+                previewContainer.style.display = 'none';
+                submitBtn.textContent = '🔍 Выберите фотографию';
+            }
+        });
+
+        // Показываем загрузку при отправке формы
+        document.getElementById('uploadForm').addEventListener('submit', function() {
+            submitBtn.disabled = true;
+            submitBtn.textContent = '⏳ Обработка...';
+        });
+    </script>
+</body>
+</html>
